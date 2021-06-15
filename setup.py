@@ -18,7 +18,7 @@ setuptools.setup(
     description="Dual sentence encoder package",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/davidalami/ConveRT",
+    url="https://github.com/eleos-health/ConveRT",
     packages=setuptools.find_packages(),
     install_requires= requirements,
     classifiers=[
