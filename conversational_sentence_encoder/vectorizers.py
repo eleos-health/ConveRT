@@ -94,7 +94,7 @@ class SentenceEncoder:
 
     def batch_process(self, func, sentences):
         encodings = []
-        for i in tqdm(range(0, len(sentences), self.batch_size), "encoding sentence batches"):
+        for i in tqdm(range(0, sentences.shape, self.batch_size), "encoding sentence batches"):
             encodings.append(func(sentences[i:i + self.batch_size]))
         return SentenceEncoder.l2_normalize(np.vstack(encodings))
 
