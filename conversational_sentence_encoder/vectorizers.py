@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
+
 import tensorflow_hub as tfhub
 import tensorflow_text  # NOQA: it is used when importing the model
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 
-from .definitions import nocontext_model
-from .definitions import multicontext_model
+from .definitions import NO_CONTEXT_MODEL_PATH, MULTI_CONTEXT_MODEL_PATH
 
 # setting the logging verbosity level to errors-only
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -31,12 +32,13 @@ class SentenceEncoder:
 
         self.sess = tf.compat.v1.Session()
 
-        self.text_placeholder = tf.compat.v1.placeholder(dtype=tf.string, shape=[None])
-
+        self.text_placeholder = tf.compat.v1.placeholder(
+            dtype=tf.string, shape=[None])
 
         if self.multiple_contexts:
-            self.module = tfhub.Module(multicontext_model)
-            self.extra_text_placeholder = tf.compat.v1.placeholder(dtype=tf.string, shape=[None])
+            self.module = tfhub.Module(MULTI_CONTEXT_MODEL_PATH)
+            self.extra_text_placeholder = tf.compat.v1.placeholder(
+                dtype=tf.string, shape=[None])
             self.context_encoding_tensor = self.module(
                 {
                     'context': self.text_placeholder,
@@ -46,18 +48,22 @@ class SentenceEncoder:
             )
 
         else:
-            self.module = tfhub.Module(nocontext_model)
-            self.context_encoding_tensor = self.module(self.text_placeholder, signature="encode_context")
+            self.module = tfhub.Module(NO_CONTEXT_MODEL_PATH)
+            self.context_encoding_tensor = self.module(
+                self.text_placeholder, signature="encode_context")
             self.encoding_tensor = self.module(self.text_placeholder)
 
-        self.response_encoding_tensor = self.module(self.text_placeholder, signature="encode_response")
+        self.response_encoding_tensor = self.module(self.text_placeholder,
+                                                    signature="encode_response")
         self.sess.run(tf.compat.v1.tables_initializer())
         self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def encode_multicontext(self, dialogue_history):
-        """Encode the whole dialogue to the encoding space to 512-dimensional vectors"""
+        """Encode the whole dialogue to the encoding
+        space to 512-dimensional vectors"""
         if not self.multiple_contexts:
-            raise NotImplementedError("Can't encode multiple contexts using a noncontext model")
+            raise NotImplementedError("Can't encode multiple contexts using a "
+                                      "non context model")
 
         context = dialogue_history[-1]
         extra_context = list(dialogue_history[:-1])
@@ -73,28 +79,33 @@ class SentenceEncoder:
         )
 
     def encode_sentences(self, sentences):
-        """Encode the given texts to the encoding space to 1024-dimensional vectors"""
+        """Encode the given texts to the encoding space
+        to 1024-dimensional vectors"""
         return self.batch_process(lambda x: self.sess.run(
             self.encoding_tensor, feed_dict={self.text_placeholder: x}
         ), sentences)
 
     def encode_contexts(self, sentences):
-        """Encode the given context texts to the encoding space to 512-dimensional vectors"""
+        """Encode the given context texts to the encoding space
+         to 512-dimensional vectors"""
         return self.batch_process(lambda x: self.sess.run(
             self.context_encoding_tensor, feed_dict={self.text_placeholder: x}
               ), sentences)
 
     def encode_responses(self, sentences):
-        """Encode the given response texts to the encoding space to 512-dimensional vectors"""
+        """Encode the given response texts to the encoding space
+        to 512-dimensional vectors"""
         return self.batch_process(
             lambda x: self.sess.run(
-                self.response_encoding_tensor, feed_dict={self.text_placeholder: x}
+                self.response_encoding_tensor,
+                feed_dict={self.text_placeholder: x}
             ),
             sentences)
 
     def batch_process(self, func, sentences):
         encodings = []
-        for i in tqdm(range(0, len(sentences), self.batch_size), "encoding sentence batches"):
+        for i in tqdm(range(0, len(sentences), self.batch_size),
+                      "encoding sentence batches"):
             encodings.append(func(sentences[i:i + self.batch_size]))
         return SentenceEncoder.l2_normalize(np.vstack(encodings))
 
